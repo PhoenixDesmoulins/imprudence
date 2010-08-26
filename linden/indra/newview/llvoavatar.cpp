@@ -82,6 +82,7 @@
 #include "llgesturemgr.h" //needed to trigger the voice gesticulations
 #include "llvoiceclient.h"
 #include "llvoicevisualizer.h" // Ventrella
+#include "llfloaterchat.h"
 
 #include "llsdserialize.h" // client resolver
 
@@ -5397,6 +5398,13 @@ BOOL LLVOAvatar::processSingleAnimationStateChange( const LLUUID& anim_id, BOOL 
 		else if (anim_id == ANIM_AGENT_SIT_GROUND_CONSTRAINED)
 		{
 			mIsSitting = TRUE;
+		}
+		else if (anim_id == ANIM_AGENT_SNAPSHOT)
+		{
+			LLChat chat;
+			chat.mText =getFullname() + " took a snapshot.";
+			chat.mSourceType = CHAT_SOURCE_SYSTEM;
+			LLFloaterChat::addChat(chat, FALSE, FALSE);
 		}
 
 

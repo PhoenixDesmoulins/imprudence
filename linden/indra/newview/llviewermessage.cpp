@@ -5821,6 +5821,8 @@ bool callback_script_dialog(const LLSD& notification, const LLSD& response)
 	// Didn't click "Ignore"
 	if (button_idx != -1)
 	{
+		if(notification["payload"].has("textbox"))
+			button = response["message"].asString();
 		LLMessageSystem* msg = gMessageSystem;
 		msg->newMessage("ScriptDialogReply");
 		msg->nextBlock("AgentData");
@@ -5903,11 +5905,27 @@ void process_script_dialog(LLMessageSystem* msg, void**)
 	}
 
 	LLNotificationForm form;
-	for (i = 0; i < button_count; i++)
+	std::string firstbutton;
+	msg->getString("Buttons", "ButtonLabel", firstbutton, 0);
+	form.addElement("button", std::string(firstbutton));
+	std::string deftext;
+	BOOL isTextBox = FALSE;
+	if (firstbutton == "!!llTextBox!!")
 	{
-		std::string tdesc;
-		msg->getString("Buttons", "ButtonLabel", tdesc, i);
-		form.addElement("button", std::string(tdesc));
+		isTextBox = TRUE;
+		for (i = 1; i < button_count; i++)
+		{
+			std::string tdesc;
+			msg->getString("Buttons", "ButtonLabel", tdesc, i);
+			deftext += tdesc;
+		}
+	} else {
+		for (i = 1; i < button_count; i++)
+		{
+			std::string tdesc;
+			msg->getString("Buttons", "ButtonLabel", tdesc, i);
+			form.addElement("button", std::string(tdesc));
+		}
 	}
 
 	LLSD args;
@@ -5916,6 +5934,9 @@ void process_script_dialog(LLMessageSystem* msg, void**)
 	LLNotificationPtr notification;
 	if (!first_name.empty())
 	{
+		args["FIRST"] = first_name;
+		args["LAST"] = last_name;
+
 		// Dialog Spam Prevention by Cryogenic
 		if(dialogSpamOn)
 		{
@@ -5955,10 +5976,17 @@ void process_script_dialog(LLMessageSystem* msg, void**)
 				lastd_names[agent_name] = 0;
 			}
 		}
-		args["FIRST"] = first_name;
-		args["LAST"] = last_name;
-		notification = LLNotifications::instance().add(
-			LLNotification::Params("ScriptDialog").substitutions(args).payload(payload).form_elements(form.asLLSD()));
+		if (!isTextBox)
+		{
+			args["FIRST"] = first_name;
+			args["LAST"] = last_name;
+			notification = LLNotifications::instance().add(
+				LLNotification::Params("ScriptDialog").substitutions(args).payload(payload).form_elements(form.asLLSD()));
+		} else {
+			args["DEFAULT"] = deftext;
+			payload["textbox"] = "true";
+			LLNotifications::instance().add("ScriptTextBoxDialog", args, payload, callback_script_dialog);
+		}
 	}
 	else
 	{
